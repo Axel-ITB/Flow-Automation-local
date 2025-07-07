@@ -20,6 +20,9 @@ if (!requireNamespace("flowDensity", quietly = TRUE)) {
 if (!requireNamespace("pheatmap", quietly = TRUE)) {
   BiocManager::install("pheatmap")
 }
+if (!requireNamespace("MASS", quietly = TRUE)) {
+  install.packages("MASS")
+}
 library(flowCore)
 library(flowStats)
 library(ggcyto)
@@ -27,7 +30,7 @@ library(flowViz)
 library(ggplot2)
 library(ggcyto)
 library(flowDensity)
-# library(cytofkit)
+library(MASS)
 
 setwd("C:/Users/AxelBergenstråle/OneDrive - ITB-MED AB/Desktop/R Projects/FACS Automation local")
 
@@ -182,36 +185,25 @@ for (i in seq_along(fs_APC_pos)) {
   fsc <- expr[, "FSC.A"]
   ssc <- expr[, "SSC.A"]
 
-
-#This part of the code does not work. The ellipse gate is not defined correctly.
-  # Calculate center and spread
-  fsc_center <- median(fsc)
-  ssc_center <- median(ssc)
-   # Calculate covariance to allow rotation of the ellipse
-  cov_mat <- cov(cbind(fsc, ssc))
-  eig <- eigen(cov_mat)
-  rotation <- eig$vectors
-  scales <- sqrt(eig$values) * 1.5  # gating factor
-
-  centered <- cbind(fsc - fsc_center, ssc - ssc_center)
-  proj <- centered %*% rotation
-  ellipse_gate <- (proj[, 1] / scales[1])^2 + (proj[, 2] / scales[2])^2 <= 1
-
-  backgated_fr <- apc_pos_fr[ellipse_gate, ]
+ # Back gate FSC and SSC using a polygon defined by the convex hull of APC+ events
+  coords <- cbind(FSC.A = fsc, SSC.A = ssc)
+  hull_idx <- chull(coords)
+  hull_coords <- coords[hull_idx, ]
+  pg <- polygonGate(filterId = "APC_backgate", .gate = hull_coords)
+  backgated_fr <- Subset(apc_pos_fr, pg)
   backgated_list[[name]] <- backgated_fr
 
   # Save plot for this sample
   png(filename = paste0("backgating_", gsub("[^A-Za-z0-9]", "_", name), ".png"), width = 900, height = 900)
   plot(fsc, ssc, col = rgb(0.7, 0.7, 0.7, 0.3), pch = 16, cex = 0.4,
-       xlab = "FSC.A", ylab = "SSC.A", main = paste("Rotated Elliptical Back-Gating:", name))
+        xlab = "FSC.A", ylab = "SSC.A",
+       main = paste("Convex Hull Back-Gating:", name))
   points(exprs(backgated_fr)[, "FSC.A"], exprs(backgated_fr)[, "SSC.A"],
          col = rgb(1, 0, 0, 0.5), pch = 16, cex = 0.5)
   #  Draw rotated ellipse using the covariance-based parameters
-  theta <- seq(0, 2*pi, length.out = 200)
-   ellipse_coords <- rotation %*% (diag(scales) %*% rbind(cos(theta), sin(theta)))
-  lines(fsc_center + ellipse_coords[1, ],
-        ssc_center + ellipse_coords[2, ],
-        col = "blue", lwd = 2)
+  polygon(hull_coords[c(seq_len(nrow(hull_coords)), 1), 1],
+          hull_coords[c(seq_len(nrow(hull_coords)), 1), 2],
+          border = "blue", lwd = 2)
   dev.off()
 }
 
