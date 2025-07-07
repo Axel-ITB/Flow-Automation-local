@@ -1,3 +1,9 @@
+*.fcs
+*.png
+*.mtx
+*.pdf
+*.wsp
+
 # History files
 .Rhistory
 .Rapp.history
