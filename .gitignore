@@ -3,6 +3,7 @@
 *.mtx
 *.pdf
 *.wsp
+*.RData
 
 # History files
 .Rhistory

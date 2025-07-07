@@ -29,7 +29,7 @@ library(ggcyto)
 library(flowDensity)
 # library(cytofkit)
 
-setwd("C:/Users/AxelBergenstråle/OneDrive - ITB-MED AB/Desktop/R Projects/FACS Automation")
+setwd("C:/Users/AxelBergenstråle/OneDrive - ITB-MED AB/Desktop/R Projects/FACS Automation local")
 
 #Steps
 # 1. Load and simple filtering data. Done.
@@ -122,7 +122,7 @@ print(new_names)
 # Assign back to sampleNames safely
 sampleNames(fs_controls) <- new_names
 
-#Need to start gating for FSC and SSC here, before spillover calculation.
+#Need to start gating for FSC and SSC here,
 
 channels <- c("APC.A", "BV786.A", "BV510.A", "BB515.A", "PE.A")
 
@@ -174,37 +174,6 @@ autoplot(fs_noncomp_trans[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 # List to hold the new back-gated populations
 backgated_list <- list()
 
-#This code is fugged, it does not work.!!!!!!!!!!!!!1 ------------------------------
-# for (i in seq_along(fs_noncomp_trans)) {
-#   original_fr <- fs_noncomp_trans[[i]]     # original sample
-#   apc_pos_fr <- fs_APC_pos[[i]]            # APC+ only
-#   name <- sampleNames(fs_noncomp_trans)[i]
-
-#   # Step 1: Define density-based gate from APC+ cells in FSC/SSC
-#   apc_gate <- flowDensity(apc_pos_fr, channels = c("FSC.A", "SSC.A"), position = c(TRUE, TRUE)) # automatically defines region
-
-#   # Step 2: Apply that gate to the original sample
-#   backgated_ids <- apc_gate@index
-#   backgated_fr <- original_fr[backgated_ids, ]
-
-#   # Step 3: Store in list
-#   backgated_list[[name]] <- backgated_fr
-
-#   # Save plot for this sample
-#   png(filename = paste0("backgating_", gsub("[^A-Za-z0-9]", "_", name), ".png"), width = 900, height = 900)
-#   plot(exprs(original_fr)[, "FSC.A"], exprs(original_fr)[, "SSC.A"],
-#        col = rgb(0.7, 0.7, 0.7, 0.3), pch = 16, cex = 0.4,
-#        xlab = "FSC.A", ylab = "SSC.A", main = paste("Back-Gating:", name))
-#   points(exprs(backgated_fr)[, "FSC.A"], exprs(backgated_fr)[, "SSC.A"],
-#          col = rgb(1, 0, 0, 0.5), pch = 16, cex = 0.5)
-#   if (is.matrix(apc_gate@filter)) {
-#     polygon(apc_gate@filter, border = "red", lwd = 2)
-#   }
-#   dev.off()
-# }
-
-backgated_list <- list()
-
 
 for (i in seq_along(fs_APC_pos)) {
   apc_pos_fr <- fs_APC_pos[[i]]
@@ -218,12 +187,15 @@ for (i in seq_along(fs_APC_pos)) {
   # Calculate center and spread
   fsc_center <- median(fsc)
   ssc_center <- median(ssc)
-  fsc_sd <- sd(fsc)
-  ssc_sd <- sd(ssc)
+   # Calculate covariance to allow rotation of the ellipse
+  cov_mat <- cov(cbind(fsc, ssc))
+  eig <- eigen(cov_mat)
+  rotation <- eig$vectors
+  scales <- sqrt(eig$values) * 1.5  # gating factor
 
-  # Define an ellipse: keep points within 1.5 SD of the median (adjust factor as needed)
-  ellipse_gate <- ((fsc - fsc_center)^2 / (1.5 * fsc_sd)^2) + 
-                  ((ssc - ssc_center)^2 / (1.5 * ssc_sd)^2) <= 1
+  centered <- cbind(fsc - fsc_center, ssc - ssc_center)
+  proj <- centered %*% rotation
+  ellipse_gate <- (proj[, 1] / scales[1])^2 + (proj[, 2] / scales[2])^2 <= 1
 
   backgated_fr <- apc_pos_fr[ellipse_gate, ]
   backgated_list[[name]] <- backgated_fr
@@ -231,12 +203,15 @@ for (i in seq_along(fs_APC_pos)) {
   # Save plot for this sample
   png(filename = paste0("backgating_", gsub("[^A-Za-z0-9]", "_", name), ".png"), width = 900, height = 900)
   plot(fsc, ssc, col = rgb(0.7, 0.7, 0.7, 0.3), pch = 16, cex = 0.4,
-       xlab = "FSC.A", ylab = "SSC.A", main = paste("Elliptical Back-Gating:", name))
+       xlab = "FSC.A", ylab = "SSC.A", main = paste("Rotated Elliptical Back-Gating:", name))
   points(exprs(backgated_fr)[, "FSC.A"], exprs(backgated_fr)[, "SSC.A"],
          col = rgb(1, 0, 0, 0.5), pch = 16, cex = 0.5)
-  # Draw ellipse
+  #  Draw rotated ellipse using the covariance-based parameters
   theta <- seq(0, 2*pi, length.out = 200)
-  lines(fsc_center + 1.5*fsc_sd*cos(theta), ssc_center + 1.5*ssc_sd*sin(theta), col = "blue", lwd = 2)
+   ellipse_coords <- rotation %*% (diag(scales) %*% rbind(cos(theta), sin(theta)))
+  lines(fsc_center + ellipse_coords[1, ],
+        ssc_center + ellipse_coords[2, ],
+        col = "blue", lwd = 2)
   dev.off()
 }
 
