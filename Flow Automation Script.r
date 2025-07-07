@@ -25,7 +25,6 @@ if (!requireNamespace("MASS", quietly = TRUE)) {
 }
 library(flowCore)
 library(flowStats)
-library(ggcyto)
 library(flowViz)
 library(ggplot2)
 library(ggcyto)
