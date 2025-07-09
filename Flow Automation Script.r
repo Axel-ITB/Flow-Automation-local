@@ -30,6 +30,7 @@ library(ggplot2)
 library(ggcyto)
 library(flowDensity)
 library(MASS)
+library(CATALYST)
 
 #setwd("C:/Users/AxelBergenstråle/OneDrive - ITB-MED AB/Desktop/R Projects/FACS Automation local")
 
@@ -281,13 +282,6 @@ logicle <- logicleTransform(w = 0.5, t = 262143, m = 4.5, a = 0)
 trans_list <- transformList(channels, logicle)
 fs_backgated_comp_trans <- transform(fs_comp, trans_list)
 
-# # Estimate transformation parameters from one sample
-# trans_auto <- estimateLogicle(fs_comp[[1]], channels)
-# # Apply to all samples in flowSet
-# fs_comp_trans <- transform(fs_comp, trans_auto)
-
-# STEP 8: Visualize the transformed data
-# Load ggcyto for visualization
 
 
 # Visualize FSC-A vs SSC-A density
@@ -297,4 +291,45 @@ autoplot(fs_backgated[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs_backgated_APC_pos[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs_backgated_comp_trans[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 
+
+
+
+#Clustering and visualization using CATALYST
+# Define the marker panel used for clustering
+panel <- data.frame(
+  channel      = c("APC.A", "BV786.A", "BV510.A", "BB515.A", "PE.A"),
+  antigen      = c("Marker1", "Marker2", "Marker3", "Marker4", "Marker5"),
+  marker_class = rep("type", 5),  # or "state"/"none" as appropriate
+  stringsAsFactors = FALSE
+)
+
+# Metadata describing each sample
+md <- data.frame(
+  file_name = sampleNames(fs_backgated_comp_trans),
+  group     = "sample",
+  stringsAsFactors = FALSE
+)
+
+# Convert the flowSet to a SingleCellExperiment
+sce <- CATALYST::prepData(fs_backgated_comp_trans, panel = panel, md = md)
+
+# Perform FlowSOM clustering
+sce <- CATALYST::cluster(
+  sce,
+  features = panel$marker,
+  xdim = 10, ydim = 10, maxK = 20
+)
+
+# Explore cluster expression to annotate cell types
+plotClusterExprs(sce, k = "meta20")
+# Alternatively:
+# plotMultiHeatmap(sce, k = "meta20")
+# Use known marker expression patterns to interpret clusters as specific cell types.
+
+# Optional: save cluster assignments for downstream analysis
+cluster_assignments <- data.frame(
+  cell_id = colnames(sce),
+  cluster = sce$cluster_id
+)
+write.csv(cluster_assignments, "cluster_assignments.csv", row.names = FALSE)
 
