@@ -35,7 +35,7 @@ setwd("C:/Users/AxelBergenstråle/OneDrive - ITB-MED AB/Desktop/R Projects/FACS 
 
 #Steps
 # 1. Load and simple filtering data. Done.
-# 2. Load controls. Done. 
+# 2. Load controls. Done.
 # Transform flourescence channels for samples. done.
 # On sample: Calculate APC.A cutoff for back gating, using density peak detection gating.
 # Using APC.A back gate the SSC and FSC channels to remove debris.
@@ -179,33 +179,43 @@ backgated_list <- list()
 
 for (i in seq_along(fs_APC_pos)) {
   apc_pos_fr <- fs_APC_pos[[i]]
-  name <- sampleNames(fs_APC_pos)[i]
-  expr <- exprs(apc_pos_fr)
-  fsc <- expr[, "FSC.A"]
-  ssc <- expr[, "SSC.A"]
+  name       <- sampleNames(fs_APC_pos)[i]
+  expr       <- exprs(apc_pos_fr)
+  fsc        <- expr[, "FSC.A"]
+  ssc        <- expr[, "SSC.A"]
 
- # Back gate FSC and SSC using a polygon defined by the convex hull of APC+ events
-  coords <- cbind(FSC.A = fsc, SSC.A = ssc)
-  hull_idx <- chull(coords)
-  hull_coords <- coords[hull_idx, ]
-  pg <- polygonGate(filterId = "APC_backgate", .gate = hull_coords)
+  #--- density-based backgate ----------------------------------------------
+  dens <- MASS::kde2d(fsc, ssc, n = 200)
+  z_sorted  <- sort(as.vector(dens$z), decreasing = TRUE)
+  cum_z     <- cumsum(z_sorted)
+  level_idx <- which(cum_z >= 0.95 * sum(z_sorted))[1]   # contour enclosing ~95%
+  dens_lvl  <- z_sorted[level_idx]
+
+  contour_list <- contourLines(dens$x, dens$y, dens$z, levels = dens_lvl)
+  if (length(contour_list) > 0) {
+    cl <- contour_list[[which.max(sapply(contour_list, function(x) length(x$x)))]]
+    gate_coords <- cbind(FSC.A = cl$x, SSC.A = cl$y)
+  } else {
+    # fallback: convex hull
+    coords      <- cbind(FSC.A = fsc, SSC.A = ssc)
+    gate_coords <- coords[chull(coords), ]
+  }
+  pg <- polygonGate(filterId = "APC_backgate", .gate = gate_coords)
   backgated_fr <- Subset(apc_pos_fr, pg)
   backgated_list[[name]] <- backgated_fr
 
-  # Save plot for this sample
-  png(filename = paste0("backgating_", gsub("[^A-Za-z0-9]", "_", name), ".png"), width = 900, height = 900)
+  png(filename = paste0("backgating_", gsub("[^A-Za-z0-9]", "_", name), ".png"),
+      width = 900, height = 900)
   plot(fsc, ssc, col = rgb(0.7, 0.7, 0.7, 0.3), pch = 16, cex = 0.4,
-        xlab = "FSC.A", ylab = "SSC.A",
-       main = paste("Convex Hull Back-Gating:", name))
+       xlab = "FSC.A", ylab = "SSC.A",
+       main = paste("Density Back-Gating:", name))
   points(exprs(backgated_fr)[, "FSC.A"], exprs(backgated_fr)[, "SSC.A"],
          col = rgb(1, 0, 0, 0.5), pch = 16, cex = 0.5)
-  #  Draw rotated ellipse using the covariance-based parameters
-  polygon(hull_coords[c(seq_len(nrow(hull_coords)), 1), 1],
-          hull_coords[c(seq_len(nrow(hull_coords)), 1), 2],
+  polygon(gate_coords[c(seq_len(nrow(gate_coords)), 1), 1],
+          gate_coords[c(seq_len(nrow(gate_coords)), 1), 2],
           border = "blue", lwd = 2)
   dev.off()
 }
-
 
 
 
