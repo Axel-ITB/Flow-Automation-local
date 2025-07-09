@@ -306,7 +306,8 @@ panel <- data.frame(
 # Metadata describing each sample
 md <- data.frame(
   file_name = sampleNames(fs_backgated_comp_trans),
-  group     = "sample",
+  sample_id = sampleNames(fs_backgated_comp_trans),
+  condition = "sample",
   stringsAsFactors = FALSE
 )
 
@@ -315,7 +316,8 @@ sce <- CATALYST::prepData(
   fs_backgated_comp_trans,
   panel = panel,
   md = md,
-  panel_cols = list(channel = "channel", antigen = "antigen", class = "marker_class")
+  panel_cols = list(channel = "channel", antigen = "antigen", class = "marker_class"),
+  md_cols = list(file = "file_name", id = "sample_id", factors = "condition")
 )
 
 # Perform FlowSOM clustering
@@ -328,13 +330,7 @@ sce <- CATALYST::cluster(
 # Explore cluster expression to annotate cell types
 plotClusterExprs(sce, k = "meta20")
 # Alternatively:
-# plotMultiHeatmap(sce, k = "meta20")
+plotMultiHeatmap(sce, k = "meta20")
 # Use known marker expression patterns to interpret clusters as specific cell types.
 
-# Optional: save cluster assignments for downstream analysis
-cluster_assignments <- data.frame(
-  cell_id = colnames(sce),
-  cluster = sce$cluster_id
-)
-write.csv(cluster_assignments, "cluster_assignments.csv", row.names = FALSE)
 
