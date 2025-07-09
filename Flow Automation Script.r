@@ -311,12 +311,17 @@ md <- data.frame(
 )
 
 # Convert the flowSet to a SingleCellExperiment
-sce <- CATALYST::prepData(fs_backgated_comp_trans, panel = panel, md = md)
+sce <- CATALYST::prepData(
+  fs_backgated_comp_trans,
+  panel = panel,
+  md = md,
+  panel_cols = list(channel = "channel", antigen = "antigen", class = "marker_class")
+)
 
 # Perform FlowSOM clustering
 sce <- CATALYST::cluster(
   sce,
-  features = panel$marker,
+  features = panel$antigen,
   xdim = 10, ydim = 10, maxK = 20
 )
 
