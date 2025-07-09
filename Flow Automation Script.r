@@ -175,7 +175,7 @@ autoplot(fs_noncomp_trans[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 
 # List to hold the new back-gated populations
 backgated_list <- list()
-
+backgated_list_cells_in_polygon <- list()
 
 for (i in seq_along(fs_APC_pos)) {
   apc_pos_fr <- fs_APC_pos[[i]]
@@ -188,7 +188,7 @@ for (i in seq_along(fs_APC_pos)) {
   dens <- MASS::kde2d(fsc, ssc, n = 200)
   z_sorted  <- sort(as.vector(dens$z), decreasing = TRUE)
   cum_z     <- cumsum(z_sorted)
-  level_idx <- which(cum_z >= 0.95 * sum(z_sorted))[1]   # contour enclosing ~95%
+  level_idx <- which(cum_z >= 0.90 * sum(z_sorted))[1]   # contour enclosing ~95%
   dens_lvl  <- z_sorted[level_idx]
 
   contour_list <- contourLines(dens$x, dens$y, dens$z, levels = dens_lvl)
@@ -203,6 +203,8 @@ for (i in seq_along(fs_APC_pos)) {
   pg <- polygonGate(filterId = "APC_backgate", .gate = gate_coords)
   backgated_fr <- Subset(apc_pos_fr, pg)
   backgated_list[[name]] <- backgated_fr
+  cells_in_polygon <- Subset(fr, pg)
+  backgated_list_cells_in_polygon[[name]] <- cells_in_polygon
 
   png(filename = paste0("backgating_", gsub("[^A-Za-z0-9]", "_", name), ".png"),
       width = 900, height = 900)
@@ -217,12 +219,9 @@ for (i in seq_along(fs_APC_pos)) {
   dev.off()
 }
 
-
-
-
-
 # Optional: convert back to flowSet
-fs_backgated <- flowSet(backgated_list)
+fs_backgated_APC_pos <- flowSet(backgated_list)
+fs_backgated <- flowSet(backgated_list_cells_in_polygon)
 
 # STEP 4: Compute spillover (compensation) matrix from single-stained controls
 # ----------------------------------------------------------------------------
@@ -284,7 +283,7 @@ fs_comp_trans <- transform(fs_comp, trans_list)
 # Visualize FSC-A vs SSC-A density
 autoplot(fs_comp_trans[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
-
-
+autoplot(fs_backgated[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
+autoplot(fs_backgated_APC_pos[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 
 
