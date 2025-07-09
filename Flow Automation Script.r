@@ -149,7 +149,6 @@ for (i in seq_along(fs_noncomp_trans)) {
   fr <- fs_noncomp_trans[[i]]
   sample_name <- sampleNames(fs_noncomp_trans)[i]
 
-
   # Automatic threshold using density gating
   threshold <- deGate(fr, channel = "APC.A", all.cuts = FALSE)
   thresholds[i] <- threshold  # store threshold for reference
@@ -188,7 +187,7 @@ for (i in seq_along(fs_APC_pos)) {
   dens <- MASS::kde2d(fsc, ssc, n = 200)
   z_sorted  <- sort(as.vector(dens$z), decreasing = TRUE)
   cum_z     <- cumsum(z_sorted)
-  level_idx <- which(cum_z >= 0.90 * sum(z_sorted))[1]   # contour enclosing ~95%
+  level_idx <- which(cum_z >= 0.90 * sum(z_sorted))[1]   # contour enclosing ~90%
   dens_lvl  <- z_sorted[level_idx]
 
   contour_list <- contourLines(dens$x, dens$y, dens$z, levels = dens_lvl)
@@ -252,9 +251,20 @@ sampleNames(fs_controls)  # Check assigned control names
 fs                        # Quickly view your experimental samples in the flowSet
 
 # STEP 7: Apply compensation matrix to your experimental samples
+
+#Inverse the transformation to apply the spillover matrix
+inv_logicle <- inverseLogicleTransform(logicle)
+
+trans_list_inv <- transformList(channels, inv_logicle)
+fs_backgated_untransformed_noncomp <- transform(fs_backgated, trans_list_inv)
+
+
+
 # --------------------------------------------------------------
 # Compensate all samples in your experimental flowSet (fs) using the spillover matrix
-fs_comp <- compensate(fs, spill_mat)
+
+
+fs_backgated_untransformed_comp <- compensate(fs, spill_mat)
 
 # Your data (fs_comp) is now compensated and ready for transformation and gating.
 
@@ -269,7 +279,7 @@ channels <- c("APC.A", "BV786.A", "BV510.A", "BB515.A", "PE.A")
 
 logicle <- logicleTransform(w = 0.5, t = 262143, m = 4.5, a = 0)
 trans_list <- transformList(channels, logicle)
-fs_comp_trans <- transform(fs_comp, trans_list)
+fs_backgated_comp_trans <- transform(fs_comp, trans_list)
 
 # # Estimate transformation parameters from one sample
 # trans_auto <- estimateLogicle(fs_comp[[1]], channels)
@@ -285,5 +295,6 @@ autoplot(fs_comp_trans[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs_backgated[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs_backgated_APC_pos[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
+autoplot(fs_backgated_comp_trans[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 
 
