@@ -4,6 +4,7 @@
 *.pdf
 *.wsp
 *.RData
+*.xlsx
 
 # History files
 .Rhistory
