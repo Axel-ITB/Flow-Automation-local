@@ -289,7 +289,7 @@ autoplot(fs_comp_trans[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs_backgated[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
 autoplot(fs_backgated_APC_pos[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
-autoplot(fs_backgated_comp_trans[[5]], x = "FSC.A", y = "SSC.A", bins = 128)
+autoplot(fs_backgated_comp_trans[[5]], x = "PE.A", y = "SSC.A", bins = 128)
 
 
 
@@ -324,11 +324,11 @@ sce <- CATALYST::prepData(
 sce <- CATALYST::cluster(
   sce,
   features = panel$antigen,
-  xdim = 10, ydim = 10, maxK = 20
+  xdim = 10, ydim = 10, maxK = 10
 )
 
 # Explore cluster expression to annotate cell types
-plotClusterExprs(sce, k = "meta20")
+plotClusterExprs(sce, k = "meta10")
 # Alternatively:
 plotMultiHeatmap(sce, k = "meta20")
 # Use known marker expression patterns to interpret clusters as specific cell types.
