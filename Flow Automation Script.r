@@ -298,7 +298,7 @@ autoplot(fs_backgated_comp_trans[[5]], x = "PE.A", y = "SSC.A", bins = 128)
 # Define the marker panel used for clustering
 panel <- data.frame(
   channel      = c("APC.A", "BV786.A", "BV510.A", "BB515.A", "PE.A"),
-  antigen      = c("Marker1", "Marker2", "Marker3", "Marker4", "Marker5"),
+  antigen      = c("CD4", "CD2", "CD3", "CD8", "CD34"),
   marker_class = rep("type", 5),  # or "state"/"none" as appropriate
   stringsAsFactors = FALSE
 )
@@ -324,11 +324,11 @@ sce <- CATALYST::prepData(
 sce <- CATALYST::cluster(
   sce,
   features = panel$antigen,
-  xdim = 10, ydim = 10, maxK = 10
+  xdim = 10, ydim = 10, maxK = 7
 )
 
 # Explore cluster expression to annotate cell types
-plotClusterExprs(sce, k = "meta10")
+plotClusterExprs(sce, k = "meta7")
 # Alternatively:
 plotMultiHeatmap(sce, k = "meta20")
 # Use known marker expression patterns to interpret clusters as specific cell types.
