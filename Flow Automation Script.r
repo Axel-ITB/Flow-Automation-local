@@ -31,6 +31,7 @@ library(ggcyto)
 library(flowDensity)
 library(MASS)
 library(CATALYST)
+library(writexl)
 
 #setwd("C:/Users/AxelBergenstråle/OneDrive - ITB-MED AB/Desktop/R Projects/FACS Automation local")
 
@@ -375,6 +376,66 @@ sce_list <- lapply(seq_along(fs_backgated_comp_trans), function(i) {
 names(sce_list) <- sampleNames(fs_backgated_comp_trans)
 
 #--------------------------------------------^^^^Run all samples seperately
-plotClusterExprs(sce_list[["Sample1"]], k = "meta7")
+
 
 plotClusterExprs(sce_list[[1]], k = "meta7")
+
+
+#-------------------------------------- Classify marker expression per cluster ----
+# Generate a summary table of marker levels for each independently clustered
+# sample. Levels are assigned based on the median expression of each marker per
+# cluster, where values below the 33rd percentile are "Negative", above the 67th
+# percentile are "Positive" and the rest are "Mid". In addition, report the
+# number and percentage of events belonging to each cluster within its sample.
+cluster_levels <- lapply(seq_along(sce_list), function(i) {
+  sce_i <- sce_list[[i]]
+  sample_name <- names(sce_list)[i]
+
+  cl_ids <- CATALYST::cluster_ids(sce_i, k = "meta7")
+  expr_mat <- assay(sce_i, "exprs")[panel$antigen, , drop = FALSE]
+  uniq_cl <- sort(unique(cl_ids))
+
+  medians <- sapply(uniq_cl, function(cl) {
+    apply(expr_mat[, cl_ids == cl, drop = FALSE], 1, median, na.rm = TRUE)
+  })
+  medians <- t(medians)
+  colnames(medians) <- panel$antigen
+  rownames(medians) <- paste0("Cluster", uniq_cl)
+
+  low  <- apply(medians, 2, quantile, probs = 0.33)
+  high <- apply(medians, 2, quantile, probs = 0.67)
+
+  classify <- function(value, marker) {
+    if (value < low[marker]) {
+      "Negative"
+    } else if (value > high[marker]) {
+      "Positive"
+    } else {
+      "Mid"
+    }
+  }
+
+  labels <- t(apply(medians, 1, function(row) {
+    sapply(seq_along(row), function(j) classify(row[j], names(row)[j]))
+  }))
+  colnames(labels) <- panel$antigen
+
+  n_events <- sapply(uniq_cl, function(cl) sum(cl_ids == cl))
+  pct_events <- n_events / length(cl_ids) * 100
+
+  data.frame(
+    Sample = sample_name,
+    Cluster = rownames(medians),
+    Events = n_events,
+    Percent = pct_events,
+    labels,
+    stringsAsFactors = FALSE
+  )
+})
+
+cluster_levels_df <- do.call(rbind, cluster_levels)
+print(cluster_levels_df)
+writexl::write_xlsx(cluster_levels_df, "cluster_summary.xlsx")
+
+
+autoplot(cluster_levels[[1]], x = "PE.A", y = "SSC.A", bins = 128)
