@@ -311,6 +311,10 @@ md <- data.frame(
   stringsAsFactors = FALSE
 )
 
+
+
+#------------------------------------- Clump together experimental samples for CATALYST analysis-------
+# -----------------Run either this or the section below to run all samples separately. Both are not needed.
 # Convert the flowSet to a SingleCellExperiment
 sce <- CATALYST::prepData(
   fs_backgated_comp_trans,
@@ -332,5 +336,45 @@ plotClusterExprs(sce, k = "meta7")
 # Alternatively:
 plotMultiHeatmap(sce, k = "meta20")
 # Use known marker expression patterns to interpret clusters as specific cell types.
+#------------------------------^^^^^^^^Clump together experimental samples for CATALYST analysis-------
 
+#--------------------------------------------Run all samples seperately
 
+# Convert and cluster each sample independently
+sce_list <- lapply(seq_along(fs_backgated_comp_trans), function(i) {
+  fr <- fs_backgated_comp_trans[[i]]
+  sample_name <- sampleNames(fs_backgated_comp_trans)[i]
+
+  fs_single <- flowSet(list(fr))      # create one-sample flowSet
+  sampleNames(fs_single) <- sample_name
+
+  md_i <- data.frame(
+    file_name = sample_name,
+    sample_id = sample_name,
+    condition = "sample",
+    stringsAsFactors = FALSE
+  )
+
+  sce_i <- CATALYST::prepData(
+    fs_single,                         # use the one-sample flowSet
+    panel = panel,
+    md = md_i,
+    panel_cols = list(channel = "channel", antigen = "antigen", class = "marker_class"),
+    md_cols = list(file = "file_name", id = "sample_id", factors = "condition")
+  )
+
+  sce_i <- CATALYST::cluster(
+    sce_i,
+    features = panel$antigen,
+    xdim = 10, ydim = 10, maxK = 7
+  )
+  sce_i
+})
+
+# sce_list now contains a clustered SingleCellExperiment for each sample
+names(sce_list) <- sampleNames(fs_backgated_comp_trans)
+
+#--------------------------------------------^^^^Run all samples seperately
+plotClusterExprs(sce_list[["Sample1"]], k = "meta7")
+
+plotClusterExprs(sce_list[[1]], k = "meta7")
