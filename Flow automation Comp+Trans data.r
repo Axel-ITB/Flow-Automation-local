@@ -40,15 +40,62 @@ print(p_hist)
 # 3.2 Automatically gate on FSC.A to remove debris
 fsc_filtered_list <- lapply(seq_along(fs_raw), function(i) {
   fr <- fs_raw[[i]]
-  threshold <- deGate(fr, channel = "FSC.A", all.cuts = FALSE)
-  fr[exprs(fr)[, "FSC.A"] > threshold, ]
+   fsc_vals <- exprs(fr)[, "FSC.A"]
+
+  ## Density-based threshold: find the valley after the first peak
+  dens <- density(fsc_vals)
+  y <- dens$y
+  x <- dens$x
+  dy <- diff(y)
+  sign_changes <- diff(sign(dy))
+  peaks <- which(sign_changes == -2) + 1
+  valleys <- which(sign_changes == 2) + 1
+
+  threshold <- deGate(
+    fr,
+    channel   = "FSC.A",
+    use.upper = TRUE,
+    upper     = FALSE,
+    all.cuts  = FALSE
+  )
+
+  if (length(peaks) > 0) {
+    first_peak <- peaks[1]
+    valley_after <- valleys[valleys > first_peak][1]
+    if (!is.na(valley_after)) {
+      threshold <- x[valley_after]
+    }
+  }
+
+  plot(
+    dens$x,
+    dens$y,
+    type = "l",
+    main = paste("FSC.A Density:", sampleNames(fs_raw)[i])
+  )
+  abline(v = threshold, col = "red", lty = 2)
+
+  fr[fsc_vals > threshold, ]
 })
 fs_filtered <- flowSet(fsc_filtered_list)
 
-# 3.3 Check cutof
+# 3.3 Check
 p_hist <- autoplot(fs_filtered[[1]], "FSC.A", bins = 128) +
   ggplot2::ggtitle("Histogram of APC.A after filtering")
 print(p_hist)
+
+
+# 3.4 Plotting x = "SSC.W", y = "FSC.H"
+p <- autoplot(fs_filtered[[1]], x = "SSC.W", y = "FSC.H", bins = 128) +
+  ggplot2::ggtitle("FSC vs SSC after filtering")
+print(p)
+
+p_hist <- autoplot(fs_filtered[[1]], "FSC.H", bins = 128) +
+  ggplot2::ggtitle("Histogram of APC.A after filtering")
+print(p_hist)
+
+# 3.5 Gating SSC.W and FSC.H
+
 
 # 4. Transform fluorescent channels (e.g. FITC.A, APC.A, etc.)
 #    Identify fluorescent channels by excluding scatter and time parameters
