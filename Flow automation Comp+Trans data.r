@@ -1,6 +1,6 @@
 #Flow automation Comp+Trans data
 
-# Minimal example: load compensated + transformed FCS files and plot FSC vs SSC
+# Minimal example: load compensated  FCS files and plot FSC vs SSC
 
 # Required libraries
 if (!requireNamespace("flowCore", quietly = TRUE)) {
@@ -14,31 +14,48 @@ library(flowCore)
 library(ggcyto)
 
 # 1. Load all FCS files from the 'comp+trans data' directory
-#    Assumes files are already compensated and transformed
+#    These files are compensated but not transformed
 fcs_path <- "comp+trans data"
-fs_raw <- read.flowSet(path = fcs_path, pattern = "\\.fcs$", alter.names = TRUE)
+fs_raw <- read.flowSet(path = fcs_path, pattern = "\\.fcs$", alter.names = TRUE, truncate_max_range = FALSE)
+
+
 
 # 1.1 Check channels
 pData(parameters(fs_raw[[1]]))
 
-# 2. Basic filtering to remove debris, doublets and extreme values
-fs_filtered <- fsApply(fs_raw, function(ff) {
-  expr <- exprs(ff)
-  # Remove events with negative FSC/SSC
-  keep_pos <- expr[, "FSC.A"] >= 0 & expr[, "SSC.A"] >= 0
-  expr <- expr[keep_pos, ]
-  # Debris filter
-  debris_keep <- expr[, "FSC.A"] > 50000 & expr[, "SSC.A"] > 10000
-  # Doublet filter using FSC-A/FSC-H ratio
-  ratio <- expr[, "FSC.A"] / (expr[, "FSC.H"] + 1e-6)
-  doublet_keep <- ratio > 0.85 & ratio < 1.15
-  # Upper bounds for extremely high values
-  high_keep <- expr[, "FSC.A"] < 250000 & expr[, "SSC.A"] < 250000
-  keep <- debris_keep & doublet_keep & high_keep
-  ff[keep, ]
-})
+
 
 # 3. Plot FSC.A vs SSC.A for the first sample
-p <- autoplot(fs_filtered[[1]], x = "FITC.A", y = "SSC.A", bins = 128) +
+p <- autoplot(fs_filtered[[3]], x = "FSC.A", y = "SSC.A", bins = 128) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
+
+# 3.1 Histogram of APC.A
+p_hist <- autoplot(fs_filtered[[1]], "APC.A", bins = 128) +
+  ggplot2::ggtitle("Histogram of APC.A after filtering")
+print(p_hist)
+
+# 4. Transform fluorescent channels (e.g. FITC.A, APC.A, etc.)
+#    Identify fluorescent channels by excluding scatter and time parameters
+param_names <- colnames(fs_filtered[[1]])
+fluor_channels <- grep("\\.A$", param_names, value = TRUE)
+fluor_channels <- setdiff(
+  fluor_channels,
+  c("FSC.A", "FSC.H", "SSC.A", "SSC.H", "Time")
+)
+
+# Estimate logicle transformation from the first sample and apply to all
+# `estimateLogicle` already returns a transformation list, so we can use it
+# directly with `transform()`
+logicle <- estimateLogicle(fs_filtered[[1]], fluor_channels)
+fs_trans <- transform(fs_filtered, logicle)
+
+# 4. Plot an example fluorescence vs SSC after transformation
+example_chan <- fluor_channels[1]
+p <- autoplot(fs_trans[[1]], x = example_chan, y = "SSC.A", bins = 128) +
+  ggplot2::ggtitle(paste("FSC vs SSC after", example_chan, "transformation"))
+print(p)
+
+p_hist <- autoplot(fs_trans[[1]], "FITC.A", bins = 128) +
+  ggplot2::ggtitle("Histogram of APC.A after filtering")
+print(p_hist)
