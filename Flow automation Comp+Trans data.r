@@ -12,6 +12,9 @@ if (!requireNamespace("ggcyto", quietly = TRUE)) {
 
 library(flowCore)
 library(ggcyto)
+library(flowDensity)
+#setwd("C:/Users/AxelBergenstråle/OneDrive - ITB-MED AB/Desktop/R Projects/FACS Automation local")
+
 
 # 1. Load all FCS files from the 'comp+trans data' directory
 #    These files are compensated but not transformed
@@ -30,7 +33,20 @@ p <- autoplot(fs_raw[[1]], x = "FSC.A", y = "SSC.A", bins = 128) +
 print(p)
 
 # 3.1 Histogram of APC.A
-p_hist <- autoplot(fs_raw[[1]], "APC.A", bins = 128) +
+p_hist <- autoplot(fs_raw[[1]], "FSC.A", bins = 128) +
+  ggplot2::ggtitle("Histogram of APC.A after filtering")
+print(p_hist)
+
+# 3.2 Automatically gate on FSC.A to remove debris
+fsc_filtered_list <- lapply(seq_along(fs_raw), function(i) {
+  fr <- fs_raw[[i]]
+  threshold <- deGate(fr, channel = "FSC.A", all.cuts = FALSE)
+  fr[exprs(fr)[, "FSC.A"] > threshold, ]
+})
+fs_filtered <- flowSet(fsc_filtered_list)
+
+# 3.3 Check cutof
+p_hist <- autoplot(fs_filtered[[1]], "FSC.A", bins = 128) +
   ggplot2::ggtitle("Histogram of APC.A after filtering")
 print(p_hist)
 
