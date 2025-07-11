@@ -86,11 +86,11 @@ print(p_hist)
 
 
 # 3.4 Plotting x = "SSC.W", y = "FSC.H"
-p <- autoplot(fs_filtered[[3]], x = "FSC.W", y = "FSC.H", bins = 128) +
+p <- autoplot(fs_filtered[[3]], x = "FSC.W", y = "FSC.H", bins = 1000) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
 
-p_hist <- autoplot(fs_filtered[[3]], "FSC.W", bins = 10000) +
+p_hist <- autoplot(fs_filtered[[3]], "FSC.W", bins = 1000) +
   ggplot2::ggtitle("Histogram of FSC.A after filtering")
 print(p_hist)
 
@@ -105,7 +105,7 @@ gate_main_peak <- function(vals, plot = FALSE, main = "gate_main_peak",
     rng <- range(vals, na.rm = TRUE)
     return(list(left = rng[1], right = rng[2]))
   }
-  dens <- density(vals, bw = bw)
+  dens <- if (!is.null(bw)) density(vals, bw = bw) else density(vals)
 
   y <- dens$y
   x <- dens$x
@@ -123,10 +123,23 @@ gate_main_peak <- function(vals, plot = FALSE, main = "gate_main_peak",
   }
   main_peak <- peaks[which.max(y[peaks])]
 
-  left_idx <- valleys[valleys < main_peak]
-  right_idx <- valleys[valleys > main_peak]
-  left <- if (length(left_idx) > 0) max(left_idx) else integer(0)
-  right <- if (length(right_idx) > 0) min(right_idx) else integer(0)
+  # Add distance and density thresholds to avoid valleys inside the main peak
+min_valley_distance <- 0.05 * diff(range(x))  # 5% of the range, adjust as needed
+valley_density_threshold <- 0.5 * y[main_peak]  # Only valleys less than 50% of peak height
+
+left_idx <- valleys[
+  (valleys < main_peak) &
+  (abs(x[valleys] - x[main_peak]) > min_valley_distance) &
+  (y[valleys] < valley_density_threshold)
+]
+right_idx <- valleys[
+  (valleys > main_peak) &
+  (abs(x[valleys] - x[main_peak]) > min_valley_distance) &
+  (y[valleys] < valley_density_threshold)
+]
+
+left <- if (length(left_idx) > 0) max(left_idx) else integer(0)
+right <- if (length(right_idx) > 0) min(right_idx) else integer(0)
 
   if (plot) {
     plot(dens$x, dens$y, type = "l", main = main)
@@ -171,6 +184,27 @@ gated_list <- lapply(seq_along(fs_filtered), function(i) {
   fr[keep, ]
 })
 fs_filtered_2x <- flowSet(gated_list)
+
+# 3.6 plotting fsc.W and FSC.H after gating
+
+p <- autoplot(fs_filtered_2x[[3]], x = "FSC.W", y = "FSC.H", bins = 1000) +
+  ggplot2::ggtitle("FSC vs SSC after filtering")
+print(p)
+
+# 3.7 ploitting SSC.W and SSC-H Before gating
+
+p <- autoplot(fs_filtered_2x[[3]], x = "SSC.W", y = "SSC.H", bins = 1000) +
+  ggplot2::ggtitle("FSC vs SSC after filtering")
+print(p)
+
+p_hist <- autoplot(fs_filtered_2x[[3]], "SSC.W", bins = 1000) +
+  ggplot2::ggtitle("Histogram of SSC.W before filtering")
+print(p_hist)
+
+
+
+# 3.8 Gating SSC.W and SSC.H
+
 
 #CODE saved for later use. Any AI like codex does not need to read anything below this line.
 # 4. Transform fluorescent channels (e.g. FITC.A, APC.A, etc.)
