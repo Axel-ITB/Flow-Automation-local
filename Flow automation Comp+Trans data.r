@@ -95,10 +95,69 @@ p_hist <- autoplot(fs_filtered[[1]], "FSC.H", bins = 128) +
 print(p_hist)
 
 # 3.5 Gating SSC.W and FSC.H
+# Helper function ---------------------------------------------------------------
+# Automatically gate around the dominant density peak of a numeric vector.
+# Returns the nearest valley thresholds on both sides. Set `plot = TRUE` to
 
+gate_main_peak <- function(vals, plot = FALSE) {
+  dens <- density(vals)
+  y <- dens$y
+  x <- dens$x
+  dy <- diff(y)
+  sc <- diff(sign(dy))
+  peaks <- which(sc == -2) + 1
+  valleys <- which(sc == 2) + 1
 
+  if (length(peaks) == 0) {
+    stop("No peaks detected")
+  }
+  main_peak <- peaks[which.max(y[peaks])]
 
+  left_idx <- valleys[valleys < main_peak]
+  right_idx <- valleys[valleys > main_peak]
+  left <- if (length(left_idx) > 0) max(left_idx) else integer(0)
+  right <- if (length(right_idx) > 0) min(right_idx) else integer(0)
 
+  if (plot) {
+    plot(dens$x, dens$y, type = "l", main = "gate_main_peak")
+    abline(v = x[main_peak], col = "blue", lty = 2)
+    if (length(left))  abline(v = x[left],  col = "red", lty = 2)
+    if (length(right)) abline(v = x[right], col = "red", lty = 2)
+  }
+
+  list(
+    left  = if (length(left))  x[left]  else NA_real_,
+    right = if (length(right)) x[right] else NA_real_
+  )
+}
+#------------End of helper function------------------------------------------------
+
+# Use density-based thresholds around the dominant peak for both FSC.H and SSC.W
+# to remove outliers. The gate_main_peak helper finds the main peak and the
+# nearest valleys on each side.
+gated_list <- lapply(seq_along(fs_filtered), function(i) {
+  fr <- fs_filtered[[i]]
+  fsc_h <- exprs(fr)[, "FSC.H"]
+  ssc_w <- exprs(fr)[, "SSC.W"]
+  th_fsc <- gate_main_peak(fsc_h)
+  th_ssc <- gate_main_peak(ssc_w)
+  keep <- (fsc_h >= th_fsc$left & fsc_h <= th_fsc$right) &
+          (ssc_w >= th_ssc$left & ssc_w <= th_ssc$right)
+
+  # Optional diagnostic plots
+  gate_main_peak(
+    fsc_h,
+    plot = TRUE,
+    main = paste("FSC.H Density:", sampleNames(fs_filtered)[i])
+  )
+  gate_main_peak(
+    ssc_w,
+    plot = TRUE,
+    main = paste("SSC.W Density:", sampleNames(fs_filtered)[i])
+  )
+  fr[keep, ]
+})
+fs_filtered <- flowSet(gated_list)
 
 #CODE saved for later use. Any AI like codex does not need to read anything below this line.
 # 4. Transform fluorescent channels (e.g. FITC.A, APC.A, etc.)
