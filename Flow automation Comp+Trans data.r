@@ -99,12 +99,14 @@ print(p_hist)
 # Automatically gate around the dominant density peak of a numeric vector.
 # Returns the nearest valley thresholds on both sides. Set `plot = TRUE` to
 
-gate_main_peak <- function(vals,
-                           plot = FALSE,
-                           main = "gate_main_peak",
-                           valley_max_y = Inf,
-                           bw = NULL) {
+gate_main_peak <- function(vals, plot = FALSE, main = "gate_main_peak",
+                           valley_max_y = Inf, bw = NULL) {
+  if (length(vals) < 2 || all(is.na(vals))) {
+    rng <- range(vals, na.rm = TRUE)
+    return(list(left = rng[1], right = rng[2]))
+  }
   dens <- density(vals, bw = bw)
+
   y <- dens$y
   x <- dens$x
   dy <- diff(y)
