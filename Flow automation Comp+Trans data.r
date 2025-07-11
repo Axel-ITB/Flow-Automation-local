@@ -94,7 +94,7 @@ p_hist <- autoplot(fs_filtered[[3]], "FSC.W", bins = 10000) +
   ggplot2::ggtitle("Histogram of FSC.A after filtering")
 print(p_hist)
 
-# 3.5 Gating SSC.W and FSC.H
+# 3.5 Gating fsc.W and FSC.H
 # Helper function ---------------------------------------------------------------
 # Automatically gate around the dominant density peak of a numeric vector.
 # Returns the nearest valley thresholds on both sides. Set `plot = TRUE` to
@@ -143,17 +143,17 @@ gate_main_peak <- function(vals, plot = FALSE, main = "gate_main_peak",
 }
 #------------End of helper function------------------------------------------------
 
-# Use density-based thresholds around the dominant peak for both FSC.H and SSC.W
+# Use density-based thresholds around the dominant peak for both FSC.H and fsc.W
 # to remove outliers. The gate_main_peak helper finds the main peak and the
 # nearest valleys on each side.
 gated_list <- lapply(seq_along(fs_filtered), function(i) {
   fr <- fs_filtered[[i]]
   fsc_h <- exprs(fr)[, "FSC.H"]
-  ssc_w <- exprs(fr)[, "FSC.W"]
+  fsc_w <- exprs(fr)[, "FSC.W"]
    th_fsc <- gate_main_peak(fsc_h, valley_max_y = 2e6)
-  th_ssc <- gate_main_peak(ssc_w, valley_max_y = 2e6)
+  th_fsc <- gate_main_peak(fsc_w, valley_max_y = 2e6)
   keep <- (fsc_h >= th_fsc$left & fsc_h <= th_fsc$right) &
-          (ssc_w >= th_ssc$left & ssc_w <= th_ssc$right)
+          (fsc_w >= th_fsc$left & fsc_w <= th_fsc$right)
 
   # Optional diagnostic plots
   gate_main_peak(
@@ -163,7 +163,7 @@ gated_list <- lapply(seq_along(fs_filtered), function(i) {
     valley_max_y = 2e6
   )
   gate_main_peak(
-    ssc_w,
+    fsc_w,
     plot = TRUE,
     main = paste("FSC.W Density:", sampleNames(fs_filtered)[i]),
     valley_max_y = 2e6
