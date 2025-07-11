@@ -97,6 +97,10 @@ print(p_hist)
 # 3.5 Gating SSC.W and FSC.H
 
 
+
+
+
+#CODE saved for later use. Any AI like codex does not need to read anything below this line.
 # 4. Transform fluorescent channels (e.g. FITC.A, APC.A, etc.)
 #    Identify fluorescent channels by excluding scatter and time parameters
 param_names <- colnames(fs_raw[[1]])
