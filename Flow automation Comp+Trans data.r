@@ -99,14 +99,21 @@ print(p_hist)
 # Automatically gate around the dominant density peak of a numeric vector.
 # Returns the nearest valley thresholds on both sides. Set `plot = TRUE` to
 
-gate_main_peak <- function(vals, plot = FALSE, main = "gate_main_peak") {
-  dens <- density(vals)
+gate_main_peak <- function(vals,
+                           plot = FALSE,
+                           main = "gate_main_peak",
+                           valley_max_y = Inf,
+                           bw = NULL) {
+  dens <- density(vals, bw = bw)
   y <- dens$y
   x <- dens$x
   dy <- diff(y)
   sc <- diff(sign(dy))
   peaks <- which(sc == -2) + 1
   valleys <- which(sc == 2) + 1
+   if (!is.infinite(valley_max_y)) {
+    valleys <- valleys[y[valleys] <= valley_max_y]
+  }
 
   if (length(peaks) == 0) {
     rng <- range(vals, na.rm = TRUE)
@@ -141,8 +148,8 @@ gated_list <- lapply(seq_along(fs_filtered), function(i) {
   fr <- fs_filtered[[i]]
   fsc_h <- exprs(fr)[, "FSC.H"]
   ssc_w <- exprs(fr)[, "FSC.W"]
-  th_fsc <- gate_main_peak(fsc_h)
-  th_ssc <- gate_main_peak(ssc_w)
+   th_fsc <- gate_main_peak(fsc_h, valley_max_y = 2e6)
+  th_ssc <- gate_main_peak(ssc_w, valley_max_y = 2e6)
   keep <- (fsc_h >= th_fsc$left & fsc_h <= th_fsc$right) &
           (ssc_w >= th_ssc$left & ssc_w <= th_ssc$right)
 
@@ -150,12 +157,14 @@ gated_list <- lapply(seq_along(fs_filtered), function(i) {
   gate_main_peak(
     fsc_h,
     plot = TRUE,
-    main = paste("FSC.H Density:", sampleNames(fs_filtered)[i])
+    main = paste("FSC.H Density:", sampleNames(fs_filtered)[i]),
+    valley_max_y = 2e6
   )
   gate_main_peak(
     ssc_w,
     plot = TRUE,
-    main = paste("FSC.W Density:", sampleNames(fs_filtered)[i])
+    main = paste("FSC.W Density:", sampleNames(fs_filtered)[i]),
+    valley_max_y = 2e6
   )
   fr[keep, ]
 })
