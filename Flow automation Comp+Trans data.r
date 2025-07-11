@@ -86,12 +86,12 @@ print(p_hist)
 
 
 # 3.4 Plotting x = "SSC.W", y = "FSC.H"
-p <- autoplot(fs_filtered[[1]], x = "SSC.W", y = "FSC.H", bins = 128) +
+p <- autoplot(fs_filtered[[3]], x = "FSC.W", y = "FSC.H", bins = 128) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
 
-p_hist <- autoplot(fs_filtered[[1]], "FSC.H", bins = 128) +
-  ggplot2::ggtitle("Histogram of APC.A after filtering")
+p_hist <- autoplot(fs_filtered[[3]], "FSC.W", bins = 10000) +
+  ggplot2::ggtitle("Histogram of FSC.A after filtering")
 print(p_hist)
 
 # 3.5 Gating SSC.W and FSC.H
@@ -99,7 +99,7 @@ print(p_hist)
 # Automatically gate around the dominant density peak of a numeric vector.
 # Returns the nearest valley thresholds on both sides. Set `plot = TRUE` to
 
-gate_main_peak <- function(vals, plot = FALSE) {
+gate_main_peak <- function(vals, plot = FALSE, main = "gate_main_peak") {
   dens <- density(vals)
   y <- dens$y
   x <- dens$x
@@ -109,7 +109,8 @@ gate_main_peak <- function(vals, plot = FALSE) {
   valleys <- which(sc == 2) + 1
 
   if (length(peaks) == 0) {
-    stop("No peaks detected")
+    rng <- range(vals, na.rm = TRUE)
+    return(list(left = rng[1], right = rng[2]))
   }
   main_peak <- peaks[which.max(y[peaks])]
 
@@ -119,15 +120,16 @@ gate_main_peak <- function(vals, plot = FALSE) {
   right <- if (length(right_idx) > 0) min(right_idx) else integer(0)
 
   if (plot) {
-    plot(dens$x, dens$y, type = "l", main = "gate_main_peak")
+    plot(dens$x, dens$y, type = "l", main = main)
     abline(v = x[main_peak], col = "blue", lty = 2)
     if (length(left))  abline(v = x[left],  col = "red", lty = 2)
     if (length(right)) abline(v = x[right], col = "red", lty = 2)
   }
 
+ rng <- range(vals, na.rm = TRUE)
   list(
-    left  = if (length(left))  x[left]  else NA_real_,
-    right = if (length(right)) x[right] else NA_real_
+    left  = if (length(left))  x[left]  else rng[1],
+    right = if (length(right)) x[right] else rng[2]
   )
 }
 #------------End of helper function------------------------------------------------
@@ -138,7 +140,7 @@ gate_main_peak <- function(vals, plot = FALSE) {
 gated_list <- lapply(seq_along(fs_filtered), function(i) {
   fr <- fs_filtered[[i]]
   fsc_h <- exprs(fr)[, "FSC.H"]
-  ssc_w <- exprs(fr)[, "SSC.W"]
+  ssc_w <- exprs(fr)[, "FSC.W"]
   th_fsc <- gate_main_peak(fsc_h)
   th_ssc <- gate_main_peak(ssc_w)
   keep <- (fsc_h >= th_fsc$left & fsc_h <= th_fsc$right) &
@@ -153,11 +155,11 @@ gated_list <- lapply(seq_along(fs_filtered), function(i) {
   gate_main_peak(
     ssc_w,
     plot = TRUE,
-    main = paste("SSC.W Density:", sampleNames(fs_filtered)[i])
+    main = paste("FSC.W Density:", sampleNames(fs_filtered)[i])
   )
   fr[keep, ]
 })
-fs_filtered <- flowSet(gated_list)
+fs_filtered_2x <- flowSet(gated_list)
 
 #CODE saved for later use. Any AI like codex does not need to read anything below this line.
 # 4. Transform fluorescent channels (e.g. FITC.A, APC.A, etc.)
