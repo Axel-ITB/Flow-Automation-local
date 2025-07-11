@@ -19,25 +19,24 @@ fcs_path <- "comp+trans data"
 fs_raw <- read.flowSet(path = fcs_path, pattern = "\\.fcs$", alter.names = TRUE, truncate_max_range = FALSE)
 
 
-
 # 1.1 Check channels
 pData(parameters(fs_raw[[1]]))
 
 
 
 # 3. Plot FSC.A vs SSC.A for the first sample
-p <- autoplot(fs_filtered[[3]], x = "FSC.A", y = "SSC.A", bins = 128) +
+p <- autoplot(fs_raw[[1]], x = "FSC.A", y = "SSC.A", bins = 128) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
 
 # 3.1 Histogram of APC.A
-p_hist <- autoplot(fs_filtered[[1]], "APC.A", bins = 128) +
+p_hist <- autoplot(fs_raw[[1]], "APC.A", bins = 128) +
   ggplot2::ggtitle("Histogram of APC.A after filtering")
 print(p_hist)
 
 # 4. Transform fluorescent channels (e.g. FITC.A, APC.A, etc.)
 #    Identify fluorescent channels by excluding scatter and time parameters
-param_names <- colnames(fs_filtered[[1]])
+param_names <- colnames(fs_raw[[1]])
 fluor_channels <- grep("\\.A$", param_names, value = TRUE)
 fluor_channels <- setdiff(
   fluor_channels,
