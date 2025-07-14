@@ -201,9 +201,51 @@ p_hist <- autoplot(fs_filtered_2x[[3]], "SSC.W", bins = 1000) +
   ggplot2::ggtitle("Histogram of SSC.W before filtering")
 print(p_hist)
 
-
-
 # 3.8 Gating SSC.W and SSC.H
+gated_ssc <- lapply(seq_along(fs_filtered_2x), function(i) {
+  fr <- fs_filtered_2x[[i]]
+  ssc_h <- exprs(fr)[, "SSC.H"]
+  ssc_w <- exprs(fr)[, "SSC.W"]
+  th_h <- gate_main_peak(ssc_h, valley_max_y = 2e6)
+  th_w <- gate_main_peak(ssc_w, valley_max_y = 2e6)
+  keep <- (ssc_h >= th_h$left & ssc_h <= th_h$right) &
+          (ssc_w >= th_w$left & ssc_w <= th_w$right)
+
+  gate_main_peak(
+    ssc_h,
+    plot = TRUE,
+    main = paste("SSC.H Density:", sampleNames(fs_filtered_2x)[i]),
+    valley_max_y = 2e6
+  )
+  gate_main_peak(
+    ssc_w,
+    plot = TRUE,
+    main = paste("SSC.W Density:", sampleNames(fs_filtered_2x)[i]),
+    valley_max_y = 2e6
+  )
+  fr[keep, ]
+})
+fs_filtered_3x <- flowSet(gated_ssc)
+
+# 3.9 plotting SSC.W and SSC-H after gating
+p <- autoplot(fs_filtered_3x[[3]], x = "SSC.W", y = "SSC.H", bins = 1000) +
+  ggplot2::ggtitle("FSC vs SSC after filtering")
+print(p)
+
+p_hist <- autoplot(fs_filtered_3x[[3]], "SSC.W", bins = 1000) +
+  ggplot2::ggtitle("Histogram of SSC.W before filtering")
+print(p_hist)
+
+
+
+
+
+
+
+
+
+
+
 
 
 #CODE saved for later use. Any AI like codex does not need to read anything below this line.
