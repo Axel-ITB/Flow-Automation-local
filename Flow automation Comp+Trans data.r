@@ -27,6 +27,8 @@ pData(parameters(fs_raw[[1]]))
 
 
 
+
+
 # 3. Plot FSC.A vs SSC.A for the first sample
 p <- autoplot(fs_raw[[1]], x = "FSC.A", y = "SSC.A", bins = 128) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
