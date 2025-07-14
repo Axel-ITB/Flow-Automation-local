@@ -255,14 +255,16 @@ param_names <- colnames(fs_raw[[3]])
 fluor_channels <- grep("\\.A$", param_names, value = TRUE)
 fluor_channels <- setdiff(
   fluor_channels,
-  c("FSC.A", "FSC.H", "SSC.A", "SSC.H")
+  c("FSC.A", "FSC.H", "SSC.A", "SSC.H", "SSC.B.A")
 )
+fluor_channels
+
 
 # Estimate logicle transformation from the first sample and apply to all
 # `estimateLogicle` already returns a transformation list, so we can use it
 # directly with `transform()`
 logicle <- estimateLogicle(fs_filtered_3x[[3]], fluor_channels)
-fs_trans <- transform(fs_filtered, logicle)
+fs_trans <- transform(fs_filtered_3x, logicle)
 
 # 4. Plot an example fluorescence vs SSC after transformation
 example_chan <- fluor_channels[3]
@@ -273,3 +275,8 @@ print(p)
 p_hist <- autoplot(fs_trans[[3]], "FITC.A", bins = 128) +
   ggplot2::ggtitle("Histogram of APC.A after filtering")
 print(p_hist)
+
+
+p <- autoplot(fs_trans[[2]], x = "Alexa.Fluor.532.A", y = "SSC.H", bins = 1000) +
+  ggplot2::ggtitle("FSC vs SSC after filtering")
+print(p)
