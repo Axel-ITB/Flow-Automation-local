@@ -240,41 +240,36 @@ print(p_hist)
 
 
 
-# 3.10 Plot CD45 Alexa.Fluor.532.A and SSC-H.
-p <- autoplot(fs_filtered_3x[[3]], x = "Alexa.Fluor.532.A", y = "SSC.H", bins = 1000) +
+
+# 3.10 Plot CD45 Alexa.Fluor.532.A and SSC-H. Only include >-10000 Alexa.Fluor.532.A values
+fr_pos <- fs_filtered_3x[[3]][exprs(fs_filtered_3x[[3]])[, "Alexa.Fluor.532.A"] > -100000, ]
+p <- autoplot(fr_pos, x = "Alexa.Fluor.532.A", y = "SSC.A", bins = 1000) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
 
 
 
-
-
-
-
-
-
-#CODE saved for later use. Any AI like codex does not need to read anything below this line.
 # 4. Transform fluorescent channels (e.g. FITC.A, APC.A, etc.)
-#    Identify fluorescent channels by excluding scatter and time parameters
-param_names <- colnames(fs_raw[[1]])
+#    Identify fluorescent channels and excluding scatter and time parameters
+param_names <- colnames(fs_raw[[3]])
 fluor_channels <- grep("\\.A$", param_names, value = TRUE)
 fluor_channels <- setdiff(
   fluor_channels,
-  c("FSC.A", "FSC.H", "SSC.A", "SSC.H", "Time")
+  c("FSC.A", "FSC.H", "SSC.A", "SSC.H")
 )
 
 # Estimate logicle transformation from the first sample and apply to all
 # `estimateLogicle` already returns a transformation list, so we can use it
 # directly with `transform()`
-logicle <- estimateLogicle(fs_filtered[[1]], fluor_channels)
+logicle <- estimateLogicle(fs_filtered_3x[[3]], fluor_channels)
 fs_trans <- transform(fs_filtered, logicle)
 
 # 4. Plot an example fluorescence vs SSC after transformation
-example_chan <- fluor_channels[1]
-p <- autoplot(fs_trans[[1]], x = example_chan, y = "SSC.A", bins = 128) +
+example_chan <- fluor_channels[3]
+p <- autoplot(fs_trans[[3]], x = example_chan, y = "SSC.A", bins = 128) +
   ggplot2::ggtitle(paste("FSC vs SSC after", example_chan, "transformation"))
 print(p)
 
-p_hist <- autoplot(fs_trans[[1]], "FITC.A", bins = 128) +
+p_hist <- autoplot(fs_trans[[3]], "FITC.A", bins = 128) +
   ggplot2::ggtitle("Histogram of APC.A after filtering")
 print(p_hist)
