@@ -238,7 +238,10 @@ print(p_hist)
 
 
 
-
+# 3.10 Plot CD45 Alexa.Fluor.532.A and SSC-H.
+p <- autoplot(fs_filtered_3x[[3]], x = "Alexa.Fluor.532.A", y = "SSC.H", bins = 1000) +
+  ggplot2::ggtitle("FSC vs SSC after filtering")
+print(p)
 
 
 
