@@ -29,7 +29,7 @@ pData(parameters(fs_raw[[1]]))
 
 
 
-# 3. Plot FSC.A vs SSC.A for the first sample
+# 3. Plot FSC.A vs SSC.A for the [[]] sample
 p <- autoplot(fs_raw[[1]], x = "FSC.A", y = "SSC.A", bins = 128) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
@@ -40,6 +40,7 @@ p_hist <- autoplot(fs_raw[[1]], "FSC.A", bins = 128) +
 print(p_hist)
 
 # 3.2 Automatically gate on FSC.A to remove debris
+dir.create("Step 3.2 plots", showWarnings = FALSE)
 fsc_filtered_list <- lapply(seq_along(fs_raw), function(i) {
   fr <- fs_raw[[i]]
    fsc_vals <- exprs(fr)[, "FSC.A"]
@@ -69,6 +70,11 @@ fsc_filtered_list <- lapply(seq_along(fs_raw), function(i) {
     }
   }
 
+ plot_file <- file.path(
+    "Step 3.2 plots",
+    paste0(sampleNames(fs_raw)[i], "_FSC_A_density.png")
+  )
+  png(plot_file)
   plot(
     dens$x,
     dens$y,
@@ -76,6 +82,7 @@ fsc_filtered_list <- lapply(seq_along(fs_raw), function(i) {
     main = paste("FSC.A Density:", sampleNames(fs_raw)[i])
   )
   abline(v = threshold, col = "red", lty = 2)
+  dev.off()
 
   fr[fsc_vals > threshold, ]
 })
@@ -100,6 +107,7 @@ print(p_hist)
 # Helper function ---------------------------------------------------------------
 # Automatically gate around the dominant density peak of a numeric vector.
 # Returns the nearest valley thresholds on both sides. Set `plot = TRUE` to
+dir.create("Step 3.5 plots", showWarnings = FALSE)
 
 gate_main_peak <- function(vals, plot = FALSE, main = "gate_main_peak",
                            valley_max_y = Inf, bw = NULL) {
@@ -171,18 +179,28 @@ gated_list <- lapply(seq_along(fs_filtered), function(i) {
           (fsc_w >= th_fsc$left & fsc_w <= th_fsc$right)
 
   # Optional diagnostic plots
+   png(file.path(
+    "Step 3.5 plots",
+    paste0(sampleNames(fs_filtered)[i], "_FSC_H_density.png")
+  ))
   gate_main_peak(
     fsc_h,
     plot = TRUE,
     main = paste("FSC.H Density:", sampleNames(fs_filtered)[i]),
     valley_max_y = 2e6
   )
+  dev.off()
+  png(file.path(
+    "Step 3.5 plots",
+    paste0(sampleNames(fs_filtered)[i], "_FSC_W_density.png")
+  ))
   gate_main_peak(
     fsc_w,
     plot = TRUE,
     main = paste("FSC.W Density:", sampleNames(fs_filtered)[i]),
     valley_max_y = 2e6
   )
+  dev.off()
   fr[keep, ]
 })
 fs_filtered_2x <- flowSet(gated_list)
@@ -272,11 +290,11 @@ p <- autoplot(fs_trans[[3]], x = example_chan, y = "SSC.A", bins = 128) +
   ggplot2::ggtitle(paste("FSC vs SSC after", example_chan, "transformation"))
 print(p)
 
-p_hist <- autoplot(fs_trans[[3]], "FITC.A", bins = 128) +
-  ggplot2::ggtitle("Histogram of APC.A after filtering")
+p_hist <- autoplot(fs_trans[[3]], "Alexa.Fluor.532.A", bins = 128) +
+  ggplot2::ggtitle("Histogram of Alexa.Fluor.532.A after filtering")
 print(p_hist)
 
 
-p <- autoplot(fs_trans[[2]], x = "Alexa.Fluor.532.A", y = "SSC.H", bins = 1000) +
+p <- autoplot(fs_trans[[3]], x = "Alexa.Fluor.532.A", y = "SSC.h", bins = 1000) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
