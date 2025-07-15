@@ -384,3 +384,67 @@ p <- autoplot(fs_alexa_pos[[3]], x = "Alexa.Fluor.700.A", y = "SSC.a", bins = 10
 print(p)
 
 # 5.2 Gate Alexa.Fluor.700.A 
+dir.create("Step 5.2 Alexa700 gating", showWarnings = FALSE)
+
+alexa700_low_list <- lapply(seq_along(fs_alexa_pos), function(i) {
+  fr <- fs_alexa_pos[[i]]
+  alexa_vals <- exprs(fr)[, "Alexa.Fluor.700.A"]
+
+  dens <- density(alexa_vals)
+  y <- dens$y
+  x <- dens$x
+  dy <- diff(y)
+  sign_changes <- diff(sign(dy))
+  peaks <- which(sign_changes == -2) + 1
+  valleys <- which(sign_changes == 2) + 1
+
+  threshold <- deGate(
+    fr,
+    channel   = "Alexa.Fluor.700.A",
+    use.upper = FALSE,
+    upper     = TRUE,
+    all.cuts  = FALSE
+  )
+
+  if (length(peaks) >= 2) {
+    top_two <- order(y[peaks], decreasing = TRUE)[1:2]
+    sel_peaks <- sort(peaks[top_two])
+    valley_between <- valleys[valleys > sel_peaks[1] & valleys < sel_peaks[2]]
+    if (length(valley_between) > 0) {
+      valley_idx <- valley_between[which.min(y[valley_between])]
+      threshold <- x[valley_idx]
+    }
+  } else if (length(peaks) == 1) {
+    valley_before <- valleys[valleys < peaks[1]]
+    if (length(valley_before) > 0) {
+      valley_idx <- valley_before[which.min(y[valley_before])]
+      threshold <- x[valley_idx]
+    }
+  }
+
+  plot_file <- file.path(
+    "Step 5.2 Alexa700 gating",
+    paste0(sampleNames(fs_alexa_pos)[i], "_AlexaFluor700_density.png")
+  )
+  png(plot_file)
+  plot(
+    dens$x,
+    dens$y,
+    type = "l",
+    main = paste("Alexa.Fluor.700.A Density:", sampleNames(fs_alexa_pos)[i])
+  )
+  abline(v = threshold, col = "red", lty = 2)
+  dev.off()
+
+  fr[alexa_vals < threshold, ]
+})
+fs_alexa700_low <- flowSet(alexa700_low_list)
+
+# 5.3 check alexa fluor 700 before gating
+p_hist <- autoplot(fs_alexa700_low[[3]], "Alexa.Fluor.700.A", bins = 128) +
+  ggplot2::ggtitle("Histogram of Alexa.Fluor.700.A before gating")  
+print(p_hist)
+
+p <- autoplot(fs_alexa700_low[[3]], x = "Alexa.Fluor.700.A", y = "SSC.a", bins = 100) +
+  ggplot2::ggtitle("FSC vs SSC after filtering")
+print(p)
