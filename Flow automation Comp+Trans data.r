@@ -369,9 +369,18 @@ p_hist <- autoplot(fs_alexa_pos[[3]], "Alexa.Fluor.532.A", bins = 128) +
 print(p_hist)
 
 
-p <- autoplot(fs_alexa_pos[[2]], x = "Alexa.Fluor.532.A", y = "SSC.h", bins = 1000) +
+p <- autoplot(fs_alexa_pos[[2]], x = "Alexa.Fluor.532.A", y = "SSC.h", bins = 100) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
 
 
+# 5.1 check alexa fluor 700 before gating
+p_hist <- autoplot(fs_alexa_pos[[3]], "Alexa.Fluor.700.A", bins = 128) +
+  ggplot2::ggtitle("Histogram of Alexa.Fluor.700.A before gating")  
+print(p_hist)
 
+p <- autoplot(fs_alexa_pos[[3]], x = "Alexa.Fluor.700.A", y = "SSC.a", bins = 100) +
+  ggplot2::ggtitle("FSC vs SSC after filtering")
+print(p)
+
+# 5.2 Gate Alexa.Fluor.700.A 
