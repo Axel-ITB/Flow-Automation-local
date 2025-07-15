@@ -291,10 +291,87 @@ p <- autoplot(fs_trans[[3]], x = example_chan, y = "SSC.A", bins = 128) +
 print(p)
 
 p_hist <- autoplot(fs_trans[[3]], "Alexa.Fluor.532.A", bins = 128) +
+  ggplot2::ggtitle("Histogram of Alexa.Fluor.532.A before gating")
+print(p_hist)
+
+
+p <- autoplot(fs_trans[[2]], x = "Alexa.Fluor.532.A", y = "SSC.h", bins = 1000) +
+  ggplot2::ggtitle("FSC vs SSC before gating")
+print(p)
+
+
+# 4.1 Gate Alexa.Fluor.532.A to isolate positive population
+#    Identify valley between two peaks on transformed data
+#    Keep events above the threshold
+
+# Directory for diagnostic plots
+dir.create("Step 4.1 Alexa gating", showWarnings = FALSE)
+
+alexa_pos_list <- lapply(seq_along(fs_trans), function(i) {
+  fr <- fs_trans[[i]]
+  alexa_vals <- exprs(fr)[, "Alexa.Fluor.532.A"]
+
+  dens <- density(alexa_vals)
+  y <- dens$y
+  x <- dens$x
+  dy <- diff(y)
+  sign_changes <- diff(sign(dy))
+  peaks <- which(sign_changes == -2) + 1
+  valleys <- which(sign_changes == 2) + 1
+
+  threshold <- deGate(
+    fr,
+    channel   = "Alexa.Fluor.532.A",
+    use.upper = TRUE,
+    upper     = FALSE,
+    all.cuts  = FALSE
+  )
+
+    if (length(peaks) >= 2) {
+    # choose the two most prominent peaks and cut at the lowest valley
+    top_two <- order(y[peaks], decreasing = TRUE)[1:2]
+    sel_peaks <- sort(peaks[top_two])
+    valley_between <- valleys[valleys > sel_peaks[1] & valleys < sel_peaks[2]]
+    if (length(valley_between) > 0) {
+      valley_idx <- valley_between[which.min(y[valley_between])]
+      threshold <- x[valley_idx]
+    }
+  } else if (length(peaks) == 1) {
+     # fall back to valley after the single detected peak
+    valley_after <- valleys[valleys > peaks[1]]
+    if (length(valley_after) > 0) {
+      valley_idx <- valley_after[which.min(y[valley_after])]
+      threshold <- x[valley_idx]
+    }
+  }
+
+  plot_file <- file.path(
+    "Step 4.1 Alexa gating",
+    paste0(sampleNames(fs_trans)[i], "_AlexaFluor532_density.png")
+  )
+  png(plot_file)
+  plot(
+    dens$x,
+    dens$y,
+    type = "l",
+    main = paste("Alexa.Fluor.532.A Density:", sampleNames(fs_trans)[i])
+  )
+  abline(v = threshold, col = "red", lty = 2)
+  dev.off()
+
+  fr[alexa_vals > threshold, ]
+})
+fs_alexa_pos <- flowSet(alexa_pos_list)
+
+# 4.2 Check the Alexa.Fluor.532.A histogram after gating
+p_hist <- autoplot(fs_alexa_pos[[3]], "Alexa.Fluor.532.A", bins = 128) +
   ggplot2::ggtitle("Histogram of Alexa.Fluor.532.A after filtering")
 print(p_hist)
 
 
-p <- autoplot(fs_trans[[3]], x = "Alexa.Fluor.532.A", y = "SSC.h", bins = 1000) +
+p <- autoplot(fs_alexa_pos[[2]], x = "Alexa.Fluor.532.A", y = "SSC.h", bins = 1000) +
   ggplot2::ggtitle("FSC vs SSC after filtering")
 print(p)
+
+
+
