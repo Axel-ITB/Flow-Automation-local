@@ -440,13 +440,61 @@ alexa700_low_list <- lapply(seq_along(fs_alexa_pos), function(i) {
 })
 fs_alexa700_low <- flowSet(alexa700_low_list)
 
-# 5.3 check alexa fluor 700 before gating
+# 5.3 check alexa fluor 700 after gating
 p_hist <- autoplot(fs_alexa700_low[[3]], "Alexa.Fluor.700.A", bins = 128) +
-  ggplot2::ggtitle("Histogram of Alexa.Fluor.700.A before gating")  
+  ggplot2::ggtitle("Histogram of Alexa.Fluor.700.A after gating")  
 print(p_hist)
 
 p <- autoplot(fs_alexa700_low[[3]], x = "Alexa.Fluor.700.A", y = "SSC.a", bins = 100) +
-  ggplot2::ggtitle("FSC vs SSC after filtering")
+  ggplot2::ggtitle("FSC vs SSC after gating")
 print(p)
+
+# 6.1 check AlexaFluor 532 before gating. Figure 6. 
+p_hist <- autoplot(fs_alexa700_low[[3]], "Alexa.Fluor.532.A", bins = 128) +
+  ggplot2::ggtitle("Histogram of Alexa.Fluor.700.A after gating")  
+print(p_hist)
+
+p <- autoplot(fs_alexa700_low[[3]], x = "Alexa.Fluor.532.A", y = "SSC.a", bins = 100) +
+  ggplot2::ggtitle("FSC vs SSC after gating")
+print(p)
+
+
+
+# 6.2 Gate Lymphs from the Lymph Mono population
+#    Using CD45 (Alexa.Fluor.532.A) versus SSC.A. We approximate the
+#    polygon gate in the reference figure with 1D thresholds on both
+#    parameters.
+dir.create("Step 6 Lymph gating", showWarnings = FALSE)
+
+lymph_list <- lapply(seq_along(fs_alexa700_low), function(i) {
+  fr <- fs_alexa700_low[[i]]
+  cd45_vals <- exprs(fr)[, "Alexa.Fluor.532.A"]
+  ssc_vals  <- exprs(fr)[, "SSC.A"]
+
+  th_ssc  <- gate_main_peak(ssc_vals)
+  th_cd45 <- gate_main_peak(cd45_vals)
+
+  plot_file <- file.path(
+    "Step 6 Lymph gating",
+    paste0(sampleNames(fs_alexa700_low)[i], "_CD45_vs_SSC_A.png")
+  )
+  png(plot_file)
+  smoothScatter(
+    cd45_vals,
+    ssc_vals,
+    xlab = "Alexa.Fluor.532.A",
+    ylab = "SSC.A",
+    main = paste("CD45 vs SSC.A:", sampleNames(fs_alexa700_low)[i])
+  )
+  abline(h = c(th_ssc$left, th_ssc$right), col = "red", lty = 2)
+  abline(v = c(th_cd45$left, th_cd45$right), col = "red", lty = 2)
+  dev.off()
+
+  keep <- (ssc_vals >= th_ssc$left & ssc_vals <= th_ssc$right) &
+          (cd45_vals >= th_cd45$left & cd45_vals <= th_cd45$right)
+  fr[keep, ]
+})
+fs_lymphs <- flowSet(lymph_list)
+
 
 
