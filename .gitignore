@@ -1,10 +1,10 @@
 *.fcs
 *.png
 *.mtx
-*.pdf
 *.wsp
 *.RData
 *.xlsx
+Controls\*
 
 # History files
 .Rhistory
