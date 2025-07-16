@@ -5,6 +5,7 @@
 *.RData
 *.xlsx
 Controls\*
+Controls/*
 
 # History files
 .Rhistory
