@@ -496,5 +496,162 @@ lymph_list <- lapply(seq_along(fs_alexa700_low), function(i) {
 })
 fs_lymphs <- flowSet(lymph_list)
 
+# 7. Gate CD14 positive events from the Lymph Mono population (Figure 7)
+dir.create("Step 7 CD14 gating", showWarnings = FALSE)
+
+cd14_pos_list <- lapply(seq_along(fs_alexa700_low), function(i) {
+  fr <- fs_alexa700_low[[i]]
+  cd14_vals <- exprs(fr)[, "BUV615.A"]
+  ssc_vals  <- exprs(fr)[, "SSC.A"]
+
+  th_cd14 <- deGate(
+    fr,
+    channel   = "BUV615.A",
+    use.upper = TRUE,
+    upper     = FALSE,
+    all.cuts  = FALSE
+  )
+  th_ssc <- gate_main_peak(ssc_vals)
+
+  plot_file <- file.path(
+    "Step 7 CD14 gating",
+    paste0(sampleNames(fs_alexa700_low)[i], "_CD14_vs_SSC_A.png")
+  )
+  png(plot_file)
+  smoothScatter(
+    cd14_vals,
+    ssc_vals,
+    xlab = "BUV615.A",
+    ylab = "SSC.A",
+    main = paste("CD14 vs SSC.A:", sampleNames(fs_alexa700_low)[i])
+  )
+  abline(v = th_cd14, col = "red", lty = 2)
+  abline(h = c(th_ssc$left, th_ssc$right), col = "red", lty = 2)
+  dev.off()
+
+  fr[cd14_vals > th_cd14, ]
+})
+fs_cd14_pos <- flowSet(cd14_pos_list)
+
+# 8. Identify CD3-CD56+ and CD3+CD56- populations from Lymphs (Figure 8)
+dir.create("Step 8 NK T gating", showWarnings = FALSE)
+
+nk_list <- vector("list", length(fs_lymphs))
+tcell_list <- vector("list", length(fs_lymphs))
+
+for (i in seq_along(fs_lymphs)) {
+  fr <- fs_lymphs[[i]]
+  cd3_vals <- exprs(fr)[, "BV785.A"]
+  cd56_vals <- exprs(fr)[, "BV605.A"]
+
+  th_cd3 <- deGate(
+    fr,
+    channel   = "BV785.A",
+    use.upper = TRUE,
+    upper     = FALSE,
+    all.cuts  = FALSE
+  )
+  th_cd56 <- deGate(
+    fr,
+    channel   = "BV605.A",
+    use.upper = TRUE,
+    upper     = FALSE,
+    all.cuts  = FALSE
+  )
+
+  plot_file <- file.path(
+    "Step 8 NK T gating",
+    paste0(sampleNames(fs_lymphs)[i], "_CD3_vs_CD56.png")
+  )
+  png(plot_file)
+  smoothScatter(
+    cd3_vals,
+    cd56_vals,
+    xlab = "BV785.A",
+    ylab = "BV605.A",
+    main = paste("CD3 vs CD56:", sampleNames(fs_lymphs)[i])
+  )
+  abline(v = th_cd3, col = "red", lty = 2)
+  abline(h = th_cd56, col = "red", lty = 2)
+  dev.off()
+
+  nk_keep <- cd3_vals <= th_cd3 & cd56_vals > th_cd56
+  t_keep  <- cd3_vals > th_cd3 & cd56_vals <= th_cd56
+
+  nk_list[[i]] <- fr[nk_keep, ]
+  tcell_list[[i]] <- fr[t_keep, ]
+}
+fs_nk <- flowSet(nk_list)
+fs_tcells <- flowSet(tcell_list)
+
+# 9. Gate CD20 positive cells from the Lymphs population (Figure 9)
+dir.create("Step 9 CD20 gating", showWarnings = FALSE)
+
+cd20_pos_list <- lapply(seq_along(fs_lymphs), function(i) {
+  fr <- fs_lymphs[[i]]
+  cd20_vals <- exprs(fr)[, "CD20.BUV496.A"]
+  cd45_vals <- exprs(fr)[, "Alexa.Fluor.532.A"]
+
+  th_cd20 <- deGate(
+    fr,
+    channel   = "CD20.BUV496.A",
+    use.upper = TRUE,
+    upper     = FALSE,
+    all.cuts  = FALSE
+  )
+
+  plot_file <- file.path(
+    "Step 9 CD20 gating",
+    paste0(sampleNames(fs_lymphs)[i], "_CD20_vs_CD45.png")
+  )
+  png(plot_file)
+  smoothScatter(
+    cd20_vals,
+    cd45_vals,
+    xlab = "CD20.BUV496.A",
+    ylab = "Alexa.Fluor.532.A",
+    main = paste("CD20 vs CD45:", sampleNames(fs_lymphs)[i])
+  )
+  abline(v = th_cd20, col = "red", lty = 2)
+  dev.off()
+
+  fr[cd20_vals > th_cd20, ]
+})
+fs_cd20_pos <- flowSet(cd20_pos_list)
+
+# 10. Gate CD3 positive cells from the Lymphs population (Figure 10)
+dir.create("Step 10 CD3 gating", showWarnings = FALSE)
+
+cd3_pos_list <- lapply(seq_along(fs_lymphs), function(i) {
+  fr <- fs_lymphs[[i]]
+  cd3_vals  <- exprs(fr)[, "CD3.BV785.A"]
+  cd45_vals <- exprs(fr)[, "Alexa.Fluor.532.A"]
+
+  th_cd3 <- deGate(
+    fr,
+    channel   = "CD3.BV785.A",
+    use.upper = TRUE,
+    upper     = FALSE,
+    all.cuts  = FALSE
+  )
+
+  plot_file <- file.path(
+    "Step 10 CD3 gating",
+    paste0(sampleNames(fs_lymphs)[i], "_CD3_vs_CD45.png")
+  )
+  png(plot_file)
+  smoothScatter(
+    cd3_vals,
+    cd45_vals,
+    xlab = "CD3.BV785.A",
+    ylab = "Alexa.Fluor.532.A",
+    main = paste("CD3 vs CD45:", sampleNames(fs_lymphs)[i])
+  )
+  abline(v = th_cd3, col = "red", lty = 2)
+  dev.off()
+
+  fr[cd3_vals > th_cd3, ]
+})
+fs_cd3_pos <- flowSet(cd3_pos_list)
 
 

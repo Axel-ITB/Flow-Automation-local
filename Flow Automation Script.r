@@ -367,7 +367,7 @@ sce_list <- lapply(seq_along(fs_backgated_comp_trans), function(i) {
   sce_i <- CATALYST::cluster(
     sce_i,
     features = panel$antigen,
-    xdim = 10, ydim = 10, maxK = 7
+    xdim = 10, ydim = 10, maxK = 10
   )
   sce_i
 })
@@ -378,7 +378,7 @@ names(sce_list) <- sampleNames(fs_backgated_comp_trans)
 #--------------------------------------------^^^^Run all samples seperately
 
 
-plotClusterExprs(sce_list[[1]], k = "meta7")
+plotClusterExprs(sce_list[[1]], k = "meta10")
 
 
 #-------------------------------------- Classify marker expression per cluster ----
@@ -391,7 +391,7 @@ cluster_levels <- lapply(seq_along(sce_list), function(i) {
   sce_i <- sce_list[[i]]
   sample_name <- names(sce_list)[i]
 
-  cl_ids <- CATALYST::cluster_ids(sce_i, k = "meta7")
+  cl_ids <- CATALYST::cluster_ids(sce_i, k = "meta10")
   expr_mat <- assay(sce_i, "exprs")[panel$antigen, , drop = FALSE]
   uniq_cl <- sort(unique(cl_ids))
 
@@ -437,5 +437,3 @@ cluster_levels_df <- do.call(rbind, cluster_levels)
 print(cluster_levels_df)
 writexl::write_xlsx(cluster_levels_df, "cluster_summary.xlsx")
 
-
-autoplot(cluster_levels[[1]], x = "PE.A", y = "SSC.A", bins = 128)
