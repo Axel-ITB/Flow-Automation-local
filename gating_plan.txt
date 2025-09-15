@@ -1,0 +1,29 @@
+# Example gating plan for comp+trans data
+# Notes:
+# - Steps run in order, each step further narrows events (AND logic).
+# - Channel names must match the colnames in your FCS (first file).
+#   To list them:
+#     Rscript -e "library(flowCore); fs<-read.flowSet(path='comp+trans data', pattern='\\.fcs$', alter.names=TRUE); print(colnames(exprs(fs[[1]])))"
+# - You can change dir/out/plots here or override via CLI.
+
+dir = comp+trans data
+out = Gated_Output
+plots = true
+
+# Scatter clean-up (dominant peak, then right of two peaks)
+FSC.A: 1
+
+# Optional width/height gates (uncomment if your files have these channels)
+# FSC.W: 1
+# FSC.H: 1
+
+# Example fluorescence cleanups (adjust to your panel; keep dominant peak)
+# Alexa.Fluor.532.A: 1
+# BV785.A: 1
+# BV605.A: 1
+# BUV615.A: 1
+# CD20.BUV496.A: 1
+
+# You can add more ordered steps below, e.g.:
+# FSC.A: 5       # select middle of three peaks
+# SSC.A: 2       # select left of two peaks
